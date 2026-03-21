@@ -1,0 +1,28 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-garden-50 text-gray-800 font-sans;
+  }
+}
+
+/* TipTap editor styles */
+.ProseMirror {
+  @apply outline-none min-h-[200px] p-4;
+}
+
+.ProseMirror p { @apply mb-2; }
+.ProseMirror h1 { @apply text-2xl font-bold mb-3; }
+.ProseMirror h2 { @apply text-xl font-bold mb-2; }
+.ProseMirror h3 { @apply text-lg font-semibold mb-2; }
+.ProseMirror ul { @apply list-disc ml-5 mb-2; }
+.ProseMirror ol { @apply list-decimal ml-5 mb-2; }
+.ProseMirror blockquote { @apply border-l-4 border-garden-400 pl-4 italic text-gray-600; }
+.ProseMirror mark { @apply bg-yellow-200; }
+.ProseMirror strong { @apply font-bold; }
+.ProseMirror em { @apply italic; }
+.ProseMirror code { @apply bg-gray-100 px-1 rounded text-sm font-mono; }
+.ProseMirror pre { @apply bg-gray-900 text-white p-4 rounded-lg overflow-x-auto; }
+.ProseMirror pre code { @apply bg-transparent text-white; }

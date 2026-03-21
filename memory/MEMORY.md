@@ -1,0 +1,1 @@
+- [Digital Garden Learning App](./project_learning_app.md) — Full-stack AI learning plan app with RAG, notes, quizzes, and garden visualization
