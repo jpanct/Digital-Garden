@@ -92,21 +92,27 @@ export default function AssessmentPage() {
     try {
       const response = await assessmentApi.respond(numericSessionId, userMessage.content)
       const data = response.data as {
-        message?: AssessmentMessage;
-        status?: string;
-        plan?: LearningPlan;
+        done: boolean;
+        message?: string;
+        level?: string;
+        plan_id?: number;
       }
 
-      if (data.message) {
-        addMessage(data.message)
+      if (!data.done && data.message) {
+        const assistantMessage: AssessmentMessage = {
+          id: Date.now(),
+          role: 'assistant',
+          content: data.message,
+          created_at: new Date().toISOString(),
+        }
+        addMessage(assistantMessage)
         setQuestionCount((prev) => prev + 1)
       }
 
-      if (data.status === 'completed' && data.plan) {
+      if (data.done && data.plan_id) {
         setBuildingPlan(true)
-        setPlan(data.plan)
         setTimeout(() => {
-          navigate(`/plan/${data.plan!.id}`)
+          navigate(`/plan/${data.plan_id}`)
         }, 1500)
       }
     } catch (err: unknown) {

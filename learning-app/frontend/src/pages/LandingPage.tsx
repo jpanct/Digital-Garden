@@ -7,7 +7,7 @@ import { useAssessmentStore } from '../store/assessmentStore'
 import { assessmentApi } from '../api/assessment'
 import client from '../api/client'
 import GardenCanvas from '../components/garden/GardenCanvas'
-import { AssessmentSession, User } from '../types'
+import { User } from '../types'
 
 const EXAMPLE_SKILLS = [
   'Python programming',
@@ -25,7 +25,7 @@ const EXAMPLE_SKILLS = [
 export default function LandingPage() {
   const navigate = useNavigate()
   const { user, setUser, clearUser } = useUserStore()
-  const { setSession } = useAssessmentStore()
+  const { setSession, addMessage, clearAssessment } = useAssessmentStore()
 
   const [username, setUsername] = useState('')
   const [skill, setSkill] = useState('')
@@ -54,11 +54,13 @@ export default function LandingPage() {
         setUser(currentUser)
       }
 
+      clearAssessment()
       const assessmentResponse = await assessmentApi.start(skill.trim(), currentUser.id)
-      const session = assessmentResponse.data as AssessmentSession
-      setSession(session.id, skill.trim())
+      const data = assessmentResponse.data as { session_id: number; message: string; question_number: number }
+      setSession(data.session_id, skill.trim())
+      addMessage({ id: Date.now(), role: 'assistant', content: data.message, created_at: new Date().toISOString() })
 
-      navigate(`/assessment/${session.id}`)
+      navigate(`/assessment/${data.session_id}`)
     } catch (err: unknown) {
       if (axios.isAxiosError(err)) {
         setError(err.response?.data?.detail || 'Something went wrong. Please try again.')

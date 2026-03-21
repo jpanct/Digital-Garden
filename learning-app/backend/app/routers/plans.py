@@ -43,7 +43,7 @@ def get_plan(plan_id: int, db: Session = Depends(get_db)):
         "garden_stage": plan.garden_stage,
         "created_at": plan.created_at,
         "updated_at": plan.updated_at,
-        "plan": plan_data,
+        "plan_data": plan_data,
     }
 
 

@@ -75,7 +75,8 @@ export default function ModulePage() {
       setResourcesLoading(true)
       try {
         const response = await resourcesApi.getResources(numericPlanId, moduleId)
-        setResources(response.data as Resource[])
+        const data = response.data as { resources: Resource[] }
+        setResources(data.resources)
       } catch {
         setResources([])
       } finally {
