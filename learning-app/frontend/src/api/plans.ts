@@ -9,4 +9,6 @@ export const plansApi = {
     client.get(`/plans/${planId}/progress`),
   getUserPlans: (userId: number) =>
     client.get(`/users/${userId}/plans`),
+  regenerate: (planId: number) =>
+    client.post(`/plans/${planId}/regenerate`),
 }

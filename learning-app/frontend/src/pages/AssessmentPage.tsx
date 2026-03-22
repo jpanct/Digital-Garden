@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef, KeyboardEvent } from 'react'
+import { useState, useEffect, useRef, KeyboardEvent, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Send, Loader2, Sprout } from 'lucide-react'
+import { ArrowLeft, Send, Loader2 } from 'lucide-react'
 import axios from 'axios'
 import { useAssessmentStore } from '../store/assessmentStore'
 import { usePlanStore } from '../store/planStore'
@@ -18,6 +18,15 @@ function TypingDots() {
   )
 }
 
+function renderBold(text: string) {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g)
+  return parts.map((part, i) =>
+    part.startsWith('**') && part.endsWith('**')
+      ? <strong key={i}>{part.slice(2, -2)}</strong>
+      : part
+  )
+}
+
 function ChatBubble({ message }: { message: AssessmentMessage }) {
   const isAssistant = message.role === 'assistant'
   return (
@@ -28,7 +37,123 @@ function ChatBubble({ message }: { message: AssessmentMessage }) {
           ? 'bg-gray-100 text-gray-800 rounded-bl-sm'
           : 'bg-garden-600 text-white rounded-br-sm'
       )}>
-        {message.content}
+        {renderBold(message.content)}
+      </div>
+    </div>
+  )
+}
+
+const STEPS = [
+  'Analysing your responses...',
+  'Determining your level...',
+  'Designing your learning path...',
+  'Planting your seed...',
+  'Growing your plan...',
+]
+
+function PlanBuildingScreen() {
+  const [stepIndex, setStepIndex] = useState(0)
+  const [visible, setVisible] = useState(true)
+
+  const advance = useCallback(() => {
+    setVisible(false)
+    setTimeout(() => {
+      setStepIndex((i) => (i + 1) % STEPS.length)
+      setVisible(true)
+    }, 400)
+  }, [])
+
+  useEffect(() => {
+    const id = setInterval(advance, 2200)
+    return () => clearInterval(id)
+  }, [advance])
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-garden-50 to-garden-100 flex flex-col items-center justify-center gap-10 px-4">
+      {/* Animated garden SVG */}
+      <div className="relative w-48 h-48">
+        <svg viewBox="0 0 200 200" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+          <style>{`
+            @keyframes grow-stem {
+              0%   { transform: scaleY(0); transform-origin: bottom; }
+              100% { transform: scaleY(1); transform-origin: bottom; }
+            }
+            @keyframes pop-leaf {
+              0%   { transform: scale(0) rotate(-30deg); opacity: 0; }
+              60%  { transform: scale(1.15) rotate(5deg); opacity: 1; }
+              100% { transform: scale(1) rotate(0deg); opacity: 1; }
+            }
+            @keyframes sway {
+              0%, 100% { transform: rotate(-3deg); }
+              50%       { transform: rotate(3deg); }
+            }
+            @keyframes pulse-glow {
+              0%, 100% { opacity: 0.4; r: 28px; }
+              50%       { opacity: 0.8; r: 34px; }
+            }
+            .stem      { animation: grow-stem 1.2s cubic-bezier(.4,0,.2,1) forwards; }
+            .leaf-l    { transform-origin: 96px 120px; animation: pop-leaf 0.6s 1s cubic-bezier(.4,0,.2,1) both, sway 3s 1.6s ease-in-out infinite; }
+            .leaf-r    { transform-origin: 104px 100px; animation: pop-leaf 0.6s 1.4s cubic-bezier(.4,0,.2,1) both, sway 3s 2s ease-in-out infinite reverse; }
+            .leaf-top  { transform-origin: 100px 80px; animation: pop-leaf 0.6s 1.8s cubic-bezier(.4,0,.2,1) both; }
+            .glow      { animation: pulse-glow 2s ease-in-out infinite; }
+          `}</style>
+
+          {/* Glowing ground circle */}
+          <circle className="glow" cx="100" cy="160" r="28" fill="#bbf7d0" />
+
+          {/* Soil */}
+          <ellipse cx="100" cy="162" rx="38" ry="11" fill="#92400e" opacity="0.55" />
+
+          {/* Stem */}
+          <g className="stem">
+            <line x1="100" y1="158" x2="100" y2="82" stroke="#16a34a" strokeWidth="4" strokeLinecap="round" />
+          </g>
+
+          {/* Left leaf */}
+          <g className="leaf-l">
+            <ellipse cx="80" cy="120" rx="20" ry="10" fill="#22c55e" transform="rotate(-35 80 120)" />
+            <line x1="96" y1="122" x2="72" y2="114" stroke="#15803d" strokeWidth="1.2" strokeLinecap="round" />
+          </g>
+
+          {/* Right leaf */}
+          <g className="leaf-r">
+            <ellipse cx="120" cy="100" rx="20" ry="10" fill="#4ade80" transform="rotate(35 120 100)" />
+            <line x1="104" y1="102" x2="128" y2="94" stroke="#15803d" strokeWidth="1.2" strokeLinecap="round" />
+          </g>
+
+          {/* Top bud */}
+          <g className="leaf-top">
+            <ellipse cx="100" cy="76" rx="10" ry="16" fill="#86efac" />
+            <ellipse cx="100" cy="70" rx="6" ry="10" fill="#bbf7d0" opacity="0.7" />
+          </g>
+
+          {/* Sparkles */}
+          <circle cx="140" cy="90" r="3" fill="#fbbf24" opacity="0" style={{ animation: 'pop-leaf 0.5s 2.2s both' }} />
+          <circle cx="58"  cy="105" r="2" fill="#fbbf24" opacity="0" style={{ animation: 'pop-leaf 0.5s 2.5s both' }} />
+          <circle cx="148" cy="130" r="2" fill="#86efac" opacity="0" style={{ animation: 'pop-leaf 0.5s 2.8s both' }} />
+        </svg>
+      </div>
+
+      {/* Text */}
+      <div className="text-center">
+        <h2 className="text-2xl font-bold text-garden-800 mb-3">Building your garden</h2>
+        <p
+          className="text-garden-600 font-medium text-base transition-opacity duration-300"
+          style={{ opacity: visible ? 1 : 0 }}
+        >
+          {STEPS[stepIndex]}
+        </p>
+      </div>
+
+      {/* Progress bar */}
+      <div className="w-56 h-1.5 bg-garden-200 rounded-full overflow-hidden">
+        <div
+          className="h-full bg-garden-500 rounded-full"
+          style={{
+            width: `${((stepIndex + 1) / STEPS.length) * 100}%`,
+            transition: 'width 0.6s ease',
+          }}
+        />
       </div>
     </div>
   )
@@ -134,18 +259,7 @@ export default function AssessmentPage() {
   }
 
   if (buildingPlan) {
-    return (
-      <div className="min-h-screen bg-garden-50 flex flex-col items-center justify-center gap-6">
-        <div className="bg-garden-600 text-white rounded-full p-6">
-          <Sprout className="w-12 h-12 animate-float" />
-        </div>
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-garden-800 mb-2">Building your learning plan...</h2>
-          <p className="text-gray-600">Personalizing your journey based on your assessment</p>
-        </div>
-        <Loader2 className="w-8 h-8 text-garden-600 animate-spin" />
-      </div>
-    )
+    return <PlanBuildingScreen />
   }
 
   return (

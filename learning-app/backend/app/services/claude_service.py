@@ -29,10 +29,13 @@ def _extract_json(text: str) -> Optional[dict]:
 def start_assessment(skill: str) -> str:
     """Returns the first assessment question from Claude."""
     system_prompt = (
-        f"You are an expert educator assessing someone's knowledge level in {skill}. "
+        f"You are a knowledgeable, respectful, and culturally sensitive educator assessing someone's knowledge level in {skill}. "
         "Ask 5-7 progressively adaptive questions to determine their level "
         "(beginner, intermediate, or advanced). Start with a broad foundational question. "
-        "Questions must be conversational, not quiz-like. After gathering enough info, "
+        "Questions must be conversational, not quiz-like. "
+        "Be culturally sensitive and respectful at all times: use accurate, inclusive terminology, "
+        "avoid stereotypes or reductive framings, and treat all cultures, traditions, and practices with equal dignity. "
+        "After gathering enough info, "
         'respond ONLY with JSON: {"assessment_complete": true, "level": "beginner|intermediate|advanced", '
         '"rationale": "..."} Output raw JSON only when done, never more than 7 questions.'
     )
@@ -58,10 +61,13 @@ def continue_assessment(skill: str, messages: list[dict]) -> dict:
     {"done": True, "level": "...", "rationale": "..."}.
     """
     system_prompt = (
-        f"You are an expert educator assessing someone's knowledge level in {skill}. "
+        f"You are a knowledgeable, respectful, and culturally sensitive educator assessing someone's knowledge level in {skill}. "
         "Ask 5-7 progressively adaptive questions to determine their level "
         "(beginner, intermediate, or advanced). Start with a broad foundational question. "
-        "Questions must be conversational, not quiz-like. After gathering enough info, "
+        "Questions must be conversational, not quiz-like. "
+        "Be culturally sensitive and respectful at all times: use accurate, inclusive terminology, "
+        "avoid stereotypes or reductive framings, and treat all cultures, traditions, and practices with equal dignity. "
+        "After gathering enough info, "
         'respond ONLY with JSON: {"assessment_complete": true, "level": "beginner|intermediate|advanced", '
         '"rationale": "..."} Output raw JSON only when done, never more than 7 questions.'
     )
@@ -187,4 +193,59 @@ def generate_quiz(
     parsed = _extract_json(content)
     if parsed is None:
         raise ValueError(f"Claude did not return valid JSON for the quiz. Raw response: {content[:300]}")
+    return parsed
+
+
+def recommend_documentaries(
+    skill: str,
+    module_title: str,
+    level: str,
+    streaming_services: list[str],
+) -> dict:
+    """
+    Recommends documentaries/films/shows available on the user's streaming services
+    that are relevant to the skill and module.
+    Returns {"recommendations": [...]}
+    """
+    services_str = ", ".join(streaming_services) if streaming_services else "any platform"
+
+    system_prompt = (
+        "You are a knowledgeable content curator recommending documentaries, films, and series "
+        "that help people learn. Respond ONLY with valid JSON — no prose, no markdown fences.\n"
+        "The JSON must follow this exact structure:\n"
+        "{\n"
+        '  "recommendations": [\n'
+        "    {\n"
+        '      "title": "string",\n'
+        '      "type": "documentary|series|film",\n'
+        '      "platform": "Netflix|Hulu|Peacock|YouTube",\n'
+        '      "description": "1-2 sentence description of what the viewer will learn",\n'
+        '      "relevance": "1 sentence explaining why this is relevant to the module"\n'
+        "    }\n"
+        "  ]\n"
+        "}\n"
+        "Requirements: 2-5 recommendations, only include titles that genuinely exist on the specified platforms. "
+        "If nothing relevant exists, return an empty recommendations array."
+    )
+
+    user_message = (
+        f"Recommend documentaries or shows for:\n"
+        f"Skill: {skill}\n"
+        f"Module: {module_title}\n"
+        f"Level: {level}\n"
+        f"Available streaming services: {services_str}\n\n"
+        "Only recommend titles actually available on those platforms. Return JSON now."
+    )
+
+    response = client.messages.create(
+        model=settings.CLAUDE_MODEL,
+        max_tokens=1024,
+        system=system_prompt,
+        messages=[{"role": "user", "content": user_message}],
+    )
+
+    content = response.content[0].text.strip()
+    parsed = _extract_json(content)
+    if parsed is None:
+        return {"recommendations": []}
     return parsed

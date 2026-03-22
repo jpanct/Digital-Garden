@@ -53,12 +53,22 @@ export interface AssessmentSession {
 
 export interface Resource {
   id: number;
-  resource_type: 'video' | 'article' | 'course' | 'book' | 'github';
+  resource_type: 'video' | 'article' | 'course' | 'book' | 'github' | 'podcast';
   title: string;
   url: string;
   source: string;
   description: string;
   relevance_score: number;
+}
+
+export type StreamingService = 'Netflix' | 'Hulu' | 'Peacock' | 'YouTube'
+
+export interface Documentary {
+  title: string;
+  type: 'documentary' | 'series' | 'film';
+  platform: StreamingService;
+  description: string;
+  relevance: string;
 }
 
 export interface Note {

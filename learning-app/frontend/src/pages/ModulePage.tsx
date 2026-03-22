@@ -1,20 +1,30 @@
 import { useState, useEffect, useCallback, type ComponentType } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { ChevronRight, Loader2, BookOpen, FileText, HelpCircle, Zap } from 'lucide-react'
+import { ChevronRight, Loader2, BookOpen, FileText, HelpCircle, Zap, Tv2, Film } from 'lucide-react'
 import axios from 'axios'
 import { usePlanStore } from '../store/planStore'
 import { useUserStore } from '../store/userStore'
+import { useStreamingStore } from '../store/streamingStore'
 import { plansApi } from '../api/plans'
 import { resourcesApi } from '../api/resources'
 import { notesApi } from '../api/notes'
 import { quizApi } from '../api/quiz'
-import { Resource, Note, Quiz, MilestoneUpdateResponse, LearningPlan, Module } from '../types'
+import { Resource, Note, Quiz, MilestoneUpdateResponse, LearningPlan, Module, Documentary, StreamingService } from '../types'
 import MilestoneItem from '../components/plan/MilestoneItem'
 import ProgressBar from '../components/plan/ProgressBar'
 import ResourceList from '../components/resources/ResourceList'
 import NoteEditor from '../components/notes/NoteEditor'
 import QuizModal from '../components/quiz/QuizModal'
 import clsx from 'clsx'
+
+const STREAMING_SERVICES: StreamingService[] = ['Netflix', 'Hulu', 'Peacock', 'YouTube']
+
+const platformColors: Record<StreamingService, string> = {
+  Netflix: 'bg-red-100 text-red-700 border-red-200',
+  Hulu: 'bg-green-100 text-green-700 border-green-200',
+  Peacock: 'bg-blue-100 text-blue-700 border-blue-200',
+  YouTube: 'bg-rose-100 text-rose-700 border-rose-200',
+}
 
 type TabId = 'resources' | 'notes' | 'quiz'
 
@@ -28,6 +38,7 @@ export default function ModulePage() {
   const { planId, moduleId } = useParams<{ planId: string; moduleId: string }>()
   const { plan, setPlan, updateMilestone } = usePlanStore()
   const { user } = useUserStore()
+  const { services: streamingServices, toggle: toggleService } = useStreamingStore()
 
   const [activeTab, setActiveTab] = useState<TabId>('resources')
   const [loadingMilestoneId, setLoadingMilestoneId] = useState<string | undefined>(undefined)
@@ -36,6 +47,10 @@ export default function ModulePage() {
   const [resources, setResources] = useState<Resource[]>([])
   const [resourcesLoading, setResourcesLoading] = useState(false)
   const [resourcesLoaded, setResourcesLoaded] = useState(false)
+
+  // Streaming / documentary state
+  const [documentaries, setDocumentaries] = useState<Documentary[]>([])
+  const [mediaLoading, setMediaLoading] = useState(false)
 
   // Notes state
   const [note, setNote] = useState<Note | null>(null)
@@ -134,6 +149,20 @@ export default function ModulePage() {
       // revert on error
     } finally {
       setLoadingMilestoneId(undefined)
+    }
+  }
+
+  const handleFetchMedia = async () => {
+    if (!numericPlanId || !moduleId || streamingServices.length === 0) return
+    setMediaLoading(true)
+    try {
+      const response = await resourcesApi.getMediaRecommendations(numericPlanId, moduleId, streamingServices)
+      const data = response.data as { recommendations: Documentary[] }
+      setDocumentaries(data.recommendations || [])
+    } catch {
+      setDocumentaries([])
+    } finally {
+      setMediaLoading(false)
     }
   }
 
@@ -251,7 +280,80 @@ export default function ModulePage() {
         <div className="p-5">
           {/* Resources tab */}
           {activeTab === 'resources' && (
-            <ResourceList resources={resources} isLoading={resourcesLoading} />
+            <div className="space-y-8">
+              <ResourceList resources={resources} isLoading={resourcesLoading} />
+
+              {/* Streaming & documentaries section */}
+              <div className="border-t border-gray-100 pt-6">
+                <div className="flex items-center gap-2 mb-3">
+                  <Tv2 className="w-4 h-4 text-garden-600" />
+                  <h3 className="text-sm font-semibold text-gray-800">Watch & Learn</h3>
+                </div>
+                <p className="text-xs text-gray-500 mb-4">
+                  Select your streaming services to get documentary and series recommendations.
+                </p>
+
+                {/* Service toggles */}
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {STREAMING_SERVICES.map((service) => (
+                    <button
+                      key={service}
+                      onClick={() => toggleService(service)}
+                      className={clsx(
+                        'px-3 py-1.5 rounded-full text-xs font-medium border transition-all cursor-pointer',
+                        streamingServices.includes(service)
+                          ? platformColors[service]
+                          : 'bg-gray-50 text-gray-500 border-gray-200 hover:border-gray-300'
+                      )}
+                    >
+                      {service}
+                    </button>
+                  ))}
+                </div>
+
+                {streamingServices.length > 0 && (
+                  <button
+                    onClick={handleFetchMedia}
+                    disabled={mediaLoading}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-garden-600 text-white rounded-lg text-xs font-medium hover:bg-garden-700 disabled:opacity-60 transition-colors cursor-pointer mb-4"
+                  >
+                    {mediaLoading ? (
+                      <><Loader2 className="w-3.5 h-3.5 animate-spin" />Finding recommendations...</>
+                    ) : (
+                      <><Film className="w-3.5 h-3.5" />Find documentaries & shows</>
+                    )}
+                  </button>
+                )}
+
+                {/* Documentary cards */}
+                {documentaries.length > 0 && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {documentaries.map((doc, i) => (
+                      <div key={i} className="bg-white border border-gray-200 rounded-xl p-4 hover:shadow-md transition-shadow">
+                        <div className="flex items-start justify-between gap-2 mb-2">
+                          <span className={clsx(
+                            'text-xs px-2 py-0.5 rounded-full font-medium border',
+                            platformColors[doc.platform] || 'bg-gray-100 text-gray-600 border-gray-200'
+                          )}>
+                            {doc.platform}
+                          </span>
+                          <span className="text-xs text-gray-400 capitalize">{doc.type}</span>
+                        </div>
+                        <h4 className="text-sm font-semibold text-gray-800 mb-1">{doc.title}</h4>
+                        <p className="text-xs text-gray-500 mb-2 leading-relaxed">{doc.description}</p>
+                        <p className="text-xs text-garden-600 italic">{doc.relevance}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {documentaries.length === 0 && !mediaLoading && streamingServices.length > 0 && (
+                  <p className="text-xs text-gray-400 italic">
+                    Click the button above to find relevant documentaries and shows.
+                  </p>
+                )}
+              </div>
+            </div>
           )}
 
           {/* Notes tab */}

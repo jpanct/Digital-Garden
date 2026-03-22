@@ -1,4 +1,4 @@
-import { BookOpen } from 'lucide-react'
+import { BookOpen, Sprout } from 'lucide-react'
 import { Resource } from '../../types'
 import ResourceCard from './ResourceCard'
 
@@ -7,32 +7,35 @@ interface ResourceListProps {
   isLoading: boolean;
 }
 
-function SkeletonCard() {
+function PlantingLoader() {
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-4 animate-pulse">
-      <div className="flex items-start justify-between gap-2 mb-3">
-        <div className="w-8 h-8 bg-gray-200 rounded-lg" />
-        <div className="w-16 h-5 bg-gray-200 rounded-full" />
+    <div className="flex flex-col items-center justify-center py-16 gap-5">
+      <div className="relative">
+        <div className="bg-garden-600 text-white rounded-full p-5 animate-bounce" style={{ animationDuration: '2s' }}>
+          <Sprout className="w-10 h-10" />
+        </div>
+        <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-12 h-2.5 bg-garden-200 rounded-full blur-sm opacity-60" />
       </div>
-      <div className="h-4 bg-gray-200 rounded mb-1 w-full" />
-      <div className="h-4 bg-gray-200 rounded mb-3 w-3/4" />
-      <div className="h-3 bg-gray-100 rounded mb-1 w-full" />
-      <div className="h-3 bg-gray-100 rounded mb-1 w-5/6" />
-      <div className="h-3 bg-gray-100 rounded mb-4 w-2/3" />
-      <div className="h-8 bg-gray-200 rounded-lg w-full" />
+      <div className="text-center">
+        <p className="font-semibold text-garden-800 text-lg">Planting your seed...</p>
+        <p className="text-sm text-gray-500 mt-1">Finding the best resources for you</p>
+      </div>
+      <div className="flex gap-1.5">
+        {[0, 1, 2].map((i) => (
+          <div
+            key={i}
+            className="w-2 h-2 bg-garden-400 rounded-full animate-bounce"
+            style={{ animationDelay: `${i * 150}ms` }}
+          />
+        ))}
+      </div>
     </div>
   )
 }
 
 export default function ResourceList({ resources, isLoading }: ResourceListProps) {
   if (isLoading) {
-    return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <SkeletonCard key={i} />
-        ))}
-      </div>
-    )
+    return <PlantingLoader />
   }
 
   if (resources.length === 0) {

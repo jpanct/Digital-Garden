@@ -1,4 +1,4 @@
-import { Video, Book, Code, GraduationCap, FileText, ExternalLink } from 'lucide-react'
+import { Video, Book, Code, GraduationCap, FileText, ExternalLink, Mic2 } from 'lucide-react'
 import { Resource } from '../../types'
 import clsx from 'clsx'
 
@@ -37,6 +37,12 @@ const typeConfig = {
     badge: 'bg-green-100 text-green-700',
     label: 'Article',
   },
+  podcast: {
+    icon: Mic2,
+    color: 'bg-purple-50 text-purple-600 border-purple-100',
+    badge: 'bg-purple-100 text-purple-700',
+    label: 'Podcast',
+  },
 }
 
 export default function ResourceCard({ resource }: ResourceCardProps) {
@@ -45,7 +51,7 @@ export default function ResourceCard({ resource }: ResourceCardProps) {
 
   return (
     <div className={clsx(
-      'flex flex-col bg-white rounded-xl border p-4 hover:shadow-md transition-shadow duration-200',
+      'group relative flex flex-col bg-white rounded-xl border p-4 hover:shadow-lg transition-all duration-200 overflow-hidden',
       config.color
     )}>
       <div className="flex items-start justify-between gap-2 mb-3">
@@ -77,6 +83,18 @@ export default function ResourceCard({ resource }: ResourceCardProps) {
         Open Resource
         <ExternalLink className="w-3 h-3" />
       </a>
+
+      {/* Hover overlay — takeaway summary */}
+      {resource.description && (
+        <div className="absolute inset-0 bg-gray-900/90 rounded-xl flex flex-col justify-center px-5 py-4 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
+          <p className="text-xs font-semibold text-garden-300 uppercase tracking-wider mb-2">
+            What you'll learn
+          </p>
+          <p className="text-sm text-white leading-relaxed line-clamp-5">
+            {resource.description}
+          </p>
+        </div>
+      )}
     </div>
   )
 }

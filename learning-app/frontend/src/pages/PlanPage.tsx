@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { Loader2, Flower2, Calendar, Target, TrendingUp } from 'lucide-react'
+import { Loader2, Flower2, Calendar, Target, TrendingUp, RefreshCw, AlertTriangle } from 'lucide-react'
 import axios from 'axios'
 import { usePlanStore } from '../store/planStore'
 import { plansApi } from '../api/plans'
@@ -24,12 +24,73 @@ const stageNames: Record<number, string> = {
   4: 'Full Tree',
 }
 
+function RegenerateModal({ onConfirm, onCancel, isLoading }: {
+  onConfirm: () => void
+  onCancel: () => void
+  isLoading: boolean
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 animate-in fade-in zoom-in duration-200">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="bg-amber-100 rounded-full p-2.5">
+            <AlertTriangle className="w-5 h-5 text-amber-600" />
+          </div>
+          <h2 className="text-lg font-bold text-gray-800">Regenerate plan?</h2>
+        </div>
+
+        <p className="text-sm text-gray-600 mb-2">
+          This will <span className="font-semibold text-red-600">permanently delete</span> your current plan, including:
+        </p>
+        <ul className="text-sm text-gray-500 mb-5 space-y-1 list-disc list-inside">
+          <li>All progress and completed milestones</li>
+          <li>Saved resources and notes</li>
+          <li>Any quizzes you've taken</li>
+        </ul>
+
+        <p className="text-sm text-gray-600 mb-6">
+          A brand new plan will be generated for the same skill and level. This cannot be undone.
+        </p>
+
+        <div className="flex gap-3">
+          <button
+            onClick={onCancel}
+            disabled={isLoading}
+            className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors cursor-pointer"
+          >
+            Keep my plan
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={isLoading}
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-red-600 text-white text-sm font-medium hover:bg-red-700 disabled:opacity-60 transition-colors cursor-pointer"
+          >
+            {isLoading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Regenerating...
+              </>
+            ) : (
+              <>
+                <RefreshCw className="w-4 h-4" />
+                Yes, regenerate
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function PlanPage() {
   const { planId } = useParams<{ planId: string }>()
   const { plan, setPlan, updateMilestone } = usePlanStore()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loadingMilestoneId, setLoadingMilestoneId] = useState<string | undefined>(undefined)
+  const [showRegenerateModal, setShowRegenerateModal] = useState(false)
+  const [isRegenerating, setIsRegenerating] = useState(false)
 
   const numericPlanId = planId ? parseInt(planId, 10) : null
 
@@ -55,6 +116,20 @@ export default function PlanPage() {
     }
     fetchPlan()
   }, [numericPlanId, plan?.id, setPlan])
+
+  const handleRegenerate = async () => {
+    if (!numericPlanId) return
+    setIsRegenerating(true)
+    try {
+      const response = await plansApi.regenerate(numericPlanId)
+      setPlan(response.data as LearningPlan)
+      setShowRegenerateModal(false)
+    } catch (err: unknown) {
+      console.error('Failed to regenerate plan', err)
+    } finally {
+      setIsRegenerating(false)
+    }
+  }
 
   const handleMilestoneToggle = async (milestoneId: string, completed: boolean) => {
     if (!numericPlanId) return
@@ -110,13 +185,22 @@ export default function PlanPage() {
     <div className="max-w-4xl mx-auto px-4 py-8">
       {/* Plan header */}
       <div className="mb-8">
-        <div className="flex flex-wrap items-center gap-2 mb-3">
-          <span className={clsx('text-xs px-2.5 py-1 rounded-full font-semibold capitalize', levelColor)}>
-            {plan.level_assessed}
-          </span>
-          <span className="text-xs bg-garden-100 text-garden-700 px-2.5 py-1 rounded-full font-medium">
-            {plan.skill}
-          </span>
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className={clsx('text-xs px-2.5 py-1 rounded-full font-semibold capitalize', levelColor)}>
+              {plan.level_assessed}
+            </span>
+            <span className="text-xs bg-garden-100 text-garden-700 px-2.5 py-1 rounded-full font-medium">
+              {plan.skill}
+            </span>
+          </div>
+          <button
+            onClick={() => setShowRegenerateModal(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-medium text-gray-600 hover:bg-gray-50 hover:border-gray-300 transition-colors cursor-pointer"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            Regenerate plan
+          </button>
         </div>
         <h1 className="text-3xl font-bold text-gray-800 mb-2">{plan.plan_data.title}</h1>
         <p className="text-gray-600">{plan.plan_data.description}</p>
@@ -204,6 +288,14 @@ export default function PlanPage() {
           ))}
         </div>
       </div>
+
+      {showRegenerateModal && (
+        <RegenerateModal
+          onConfirm={handleRegenerate}
+          onCancel={() => setShowRegenerateModal(false)}
+          isLoading={isRegenerating}
+        />
+      )}
     </div>
   )
 }

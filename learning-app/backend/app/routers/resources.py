@@ -1,16 +1,23 @@
 from __future__ import annotations
 import json
 from datetime import datetime, timedelta
+from typing import List
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.learning_plan import LearningPlan
 from app.models.resource import Resource
 from app.services import rag_service
+from app.services import claude_service
 
 router = APIRouter()
 
 CACHE_TTL_DAYS = 7
+
+
+class MediaRequest(BaseModel):
+    streaming_services: List[str]
 
 
 @router.get("/plans/{plan_id}/modules/{module_id}/resources")
@@ -111,3 +118,35 @@ async def get_module_resources(
             for r in saved_resources
         ],
     }
+
+
+@router.post("/plans/{plan_id}/modules/{module_id}/media")
+def get_media_recommendations(
+    plan_id: int,
+    module_id: str,
+    body: MediaRequest,
+    db: Session = Depends(get_db),
+):
+    plan = db.get(LearningPlan, plan_id)
+    if not plan:
+        raise HTTPException(status_code=404, detail="Plan not found.")
+
+    plan_data = json.loads(plan.plan_json)
+    module_info = next(
+        (m for m in plan_data.get("modules", []) if m.get("id") == module_id),
+        None,
+    )
+    if not module_info:
+        raise HTTPException(status_code=404, detail=f"Module '{module_id}' not found.")
+
+    try:
+        result = claude_service.recommend_documentaries(
+            skill=plan.skill,
+            module_title=module_info.get("title", ""),
+            level=plan.level_assessed or "beginner",
+            streaming_services=body.streaming_services,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Media recommendation error: {str(e)}")
+
+    return result

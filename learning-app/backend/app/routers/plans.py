@@ -7,7 +7,11 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.learning_plan import LearningPlan
+from app.models.resource import Resource
+from app.models.note import Note
+from app.models.quiz import Quiz
 from app.services.garden_service import calculate_garden_stage
+from app.services import claude_service
 
 router = APIRouter()
 
@@ -139,4 +143,54 @@ def get_plan_progress(plan_id: int, db: Session = Depends(get_db)):
         "progress_percentage": progress_pct,
         "garden_stage": plan.garden_stage,
         "module_progress": module_progress,
+    }
+
+
+@router.post("/plans/{plan_id}/regenerate")
+def regenerate_plan(plan_id: int, db: Session = Depends(get_db)):
+    plan = db.get(LearningPlan, plan_id)
+    if not plan:
+        raise HTTPException(status_code=404, detail="Plan not found.")
+
+    # Generate a fresh plan from Claude
+    try:
+        plan_data = claude_service.generate_plan(
+            plan.skill,
+            plan.level_assessed or "beginner",
+            f"Regenerating plan for {plan.skill} at {plan.level_assessed} level.",
+        )
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Plan generation error: {str(e)}")
+
+    total_milestones = sum(
+        len(mod.get("milestones", []))
+        for mod in plan_data.get("modules", [])
+    )
+
+    # Wipe associated resources, notes, and quizzes
+    db.query(Resource).filter(Resource.plan_id == plan_id).delete()
+    db.query(Note).filter(Note.plan_id == plan_id).delete()
+    db.query(Quiz).filter(Quiz.plan_id == plan_id).delete()
+
+    # Reset the plan
+    plan.plan_json = json.dumps(plan_data)
+    plan.total_milestones = total_milestones
+    plan.completed_milestones = 0
+    plan.garden_stage = 0
+    plan.updated_at = datetime.utcnow()
+
+    db.commit()
+    db.refresh(plan)
+
+    return {
+        "id": plan.id,
+        "user_id": plan.user_id,
+        "skill": plan.skill,
+        "level_assessed": plan.level_assessed,
+        "total_milestones": plan.total_milestones,
+        "completed_milestones": plan.completed_milestones,
+        "garden_stage": plan.garden_stage,
+        "created_at": plan.created_at,
+        "updated_at": plan.updated_at,
+        "plan_data": plan_data,
     }
