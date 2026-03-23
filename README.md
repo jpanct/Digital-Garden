@@ -1,4 +1,4 @@
-# Digital Garden
+# Digital Garden [IN PROGRESS]
 **Learn anything with structure—not another wall of AI slop.**
 ## The problem
 A lot of learners have tried “just ask the chatbot” and bounced off. The model answers feel **generic**, **unbounded**, and **hard to trust**: long essays, no real diagnosis of where you are, no clear next steps, and no sense of progress. That is not a learning system—it is **AI slop**: cheap volume instead of a plan you can actually follow.
